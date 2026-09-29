@@ -1208,6 +1208,35 @@ async def set_pin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 3. المعالجة المركزية لمدخلات المستخدم
 # ==========================================
 async def process_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE, data: dict, status_msg):
+    class SafeStatus:
+        def __init__(self, msg, upd):
+            self.msg = msg
+            self.upd = upd
+
+        async def edit_text(self, text, parse_mode="Markdown", reply_markup=None):
+            for attempt in range(3):
+                try:
+                    if self.msg:
+                        return await self.msg.edit_text(text, parse_mode=parse_mode, reply_markup=reply_markup)
+                    else:
+                        return await self.upd.effective_message.reply_text(text, parse_mode=parse_mode, reply_markup=reply_markup)
+                except Exception:
+                    if attempt < 2:
+                        await asyncio.sleep(1.0)
+                    else:
+                        try:
+                            return await self.upd.effective_message.reply_text(text, parse_mode=parse_mode, reply_markup=reply_markup)
+                        except Exception:
+                            pass
+
+        async def delete(self):
+            if self.msg:
+                try:
+                    await self.msg.delete()
+                except Exception:
+                    pass
+
+    status_msg = SafeStatus(status_msg, update)
     intent = data.get("intent")
     user_key = get_user_identifier(update.effective_user)
     date_str = get_now().strftime("%Y-%m-%d")
@@ -1962,15 +1991,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     fast_del = fast_parse_deletion(user_text)
     if fast_del:
         if fast_del.get("is_last"):
-            status = await update.effective_message.reply_text("جاري إلغاء وحذف آخر إجراء... ⚡🗑️")
             del_msg = await execute_undo_last_action(user_key)
-            await status.edit_text(del_msg, parse_mode="Markdown", reply_markup=get_main_keyboard())
+            try:
+                await update.effective_message.reply_text(del_msg, parse_mode="Markdown", reply_markup=get_main_keyboard())
+            except Exception:
+                await asyncio.sleep(1)
+                await update.effective_message.reply_text(del_msg, parse_mode="Markdown", reply_markup=get_main_keyboard())
             return
-        status = await update.effective_message.reply_text("جاري مسح المعاملة فوراً... ⚡🗑️")
+        status = None
+        for _ in range(3):
+            try:
+                status = await update.effective_message.reply_text("جاري مسح المعاملة فوراً... ⚡🗑️")
+                break
+            except Exception:
+                await asyncio.sleep(1)
         await process_user_input(update, context, fast_del, status)
         return
 
-    status = await update.effective_message.reply_text("جاري المعالجة والتنفيذ... ⏳")
+    status = None
+    for _ in range(3):
+        try:
+            status = await update.effective_message.reply_text("جاري المعالجة والتنفيذ... ⏳")
+            break
+        except Exception:
+            await asyncio.sleep(1)
+
     data = await analyze_user_request(user_text, is_audio=False, user_key=user_key)
     await process_user_input(update, context, data, status)
 

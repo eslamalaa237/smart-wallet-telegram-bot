@@ -122,6 +122,10 @@ async def post_init(application):
     print("✅ تم تسجيل قائمة الأوامر التلقائية في تليجرام بنجاح.")
 
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logging.warning(f"⚠️ تنبيه شبكة أو استجابة مؤقتة: {context.error}")
+
+
 # ==========================================
 # 3. تشغيل البوت (Main Entry Point)
 # ==========================================
@@ -133,12 +137,18 @@ def main():
 
     threading.Thread(target=run_web_server, daemon=True).start()
 
-    t_request = HTTPXRequest(
-        connect_timeout=35.0,
-        read_timeout=35.0,
-        write_timeout=35.0,
-        pool_timeout=35.0,
-    )
+    proxy_url = os.environ.get("https_proxy") or os.environ.get("http_proxy")
+    req_kwargs = {
+        "connect_timeout": 45.0,
+        "read_timeout": 45.0,
+        "write_timeout": 45.0,
+        "pool_timeout": 45.0,
+    }
+    if proxy_url:
+        req_kwargs["proxy_url"] = proxy_url
+        logging.info(f"🌐 تفعيل البروكسي: {proxy_url}")
+
+    t_request = HTTPXRequest(**req_kwargs)
     app = (
         ApplicationBuilder()
         .token(TELEGRAM_BOT_TOKEN)
@@ -146,6 +156,8 @@ def main():
         .post_init(post_init)
         .build()
     )
+
+    app.add_error_handler(error_handler)
 
     job_queue = app.job_queue
     if job_queue:
