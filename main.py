@@ -81,13 +81,16 @@ class HealthCheckHandler(BaseHTTPRequestHandler):
 
 
 def run_web_server():
-    port = int(os.environ.get("PORT", 8080))
+    port_str = os.environ.get("PORT")
+    if not port_str:
+        return
     try:
+        port = int(port_str)
         server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
         logging.info(f"🌐 خادم الويب يعمل على المنفذ {port} للاستجابة لـ UptimeRobot.")
         server.serve_forever()
     except Exception as e:
-        logging.error(f"خطأ في خادم الويب: {e}")
+        logging.warning(f"خادم الويب لم يبدأ (غير مطلوب على هذه البيئة): {e}")
 
 
 # ==========================================
@@ -146,7 +149,7 @@ def main():
         "pool_timeout": 45.0,
     }
     if proxy_url:
-        req_kwargs["proxy_url"] = proxy_url
+        req_kwargs["proxy"] = proxy_url
         logging.info(f"🌐 تفعيل البروكسي: {proxy_url}")
 
     t_request = HTTPXRequest(**req_kwargs)
