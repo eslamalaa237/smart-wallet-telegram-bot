@@ -6,7 +6,7 @@ from google import genai
 from google.genai import types
 
 from config import GEMINI_API_KEY, FALLBACK_MODELS, get_now
-from sheets_db import get_monthly_budget, normalize_ar_search
+from sheets_db import get_monthly_budget, normalize_ar_search, get_user_categories
 
 # ==========================================
 # 1. دوال استخراج النصوص ومعالجة JSON
@@ -341,14 +341,16 @@ async def analyze_receipt_image(photo_bytes):
 # ==========================================
 # 5. محرك الفهم الذكي المطور (Multi-Action Engine)
 # ==========================================
-def _analyze_sync(content_input, is_audio, mime_type):
+def _analyze_sync(content_input, is_audio, mime_type, custom_categories=None):
     now = get_now()
     today_str = now.strftime("%Y-%m-%d")
     weekday_ar = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"][now.weekday()]
+    cats_str = "، ".join(custom_categories) if custom_categories else "طعام ومشروبات، مواصلات، تسوق، فواتير، ترفيه، صحة وعلاج، تعليم، سفر، التزامات، أخرى"
 
     prompt = f"""
     أنت مساعد مالي ذكي بالعامية المصرية. حلل الرسالة واستخرج كل الأوامر والعمليات الواردة فيها بدقة بتنسيق JSON فقط.
     تاريخ اليوم: {today_str} (يوم {weekday_ar}).
+    التصنيفات المتاحة للمصاريف: {cats_str}
 
     📌 ميزة تسجيل العمليات السابقة (Backdating):
     إذا ذكر المستخدم تاريخاً أو يوماً في الماضي (مثل: "امبارح", "أمس", "أول امبارح", "الخميس اللي فات", "يوم 15 الشهر ده", "بتاريخ 2026-09-20"):
@@ -499,5 +501,6 @@ def _analyze_sync(content_input, is_audio, mime_type):
     return {"intent": "error"}
 
 
-async def analyze_user_request(content_input, is_audio=False, mime_type="audio/ogg"):
-    return await asyncio.to_thread(_analyze_sync, content_input, is_audio, mime_type)
+async def analyze_user_request(content_input, is_audio=False, mime_type="audio/ogg", user_key=None):
+    cats = get_user_categories(user_key) if user_key else None
+    return await asyncio.to_thread(_analyze_sync, content_input, is_audio, mime_type, cats)
