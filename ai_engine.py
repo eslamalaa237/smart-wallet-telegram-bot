@@ -341,7 +341,7 @@ async def analyze_receipt_image(photo_bytes):
 # ==========================================
 # 5. محرك الفهم الذكي المطور (Multi-Action Engine)
 # ==========================================
-def _analyze_sync(content_input, is_audio, mime_type, custom_categories=None):
+def _analyze_sync(content_input, is_audio, mime_type, custom_categories=None, *args, **kwargs):
     now = get_now()
     today_str = now.strftime("%Y-%m-%d")
     weekday_ar = ["الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"][now.weekday()]
@@ -501,6 +501,6 @@ def _analyze_sync(content_input, is_audio, mime_type, custom_categories=None):
     return {"intent": "error"}
 
 
-async def analyze_user_request(content_input, is_audio=False, mime_type="audio/ogg", user_key=None):
+async def analyze_user_request(content_input, is_audio=False, mime_type="audio/ogg", user_key=None, *args, **kwargs):
     cats = get_user_categories(user_key) if user_key else None
-    return await asyncio.to_thread(_analyze_sync, content_input, is_audio, mime_type, cats)
+    return await asyncio.to_thread(_analyze_sync, content_input, is_audio, mime_type, cats, *args, **kwargs)
