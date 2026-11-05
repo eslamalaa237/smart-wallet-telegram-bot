@@ -41,6 +41,16 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SPREADSHEET_NAME = os.environ.get("SPREADSHEET_NAME", "Your_Wallet")
 
+# دعم توليد credentials.json تلقائياً من متغيرات البيئة في السيرفرات السحابية (Render وغيرها)
+if not os.path.exists(CREDENTIALS_FILE):
+    creds_env = os.environ.get("GOOGLE_CREDENTIALS_JSON") or os.environ.get("CREDENTIALS_JSON")
+    if creds_env:
+        try:
+            with open(CREDENTIALS_FILE, "w", encoding="utf-8") as f:
+                f.write(creds_env.strip())
+        except Exception:
+            pass
+
 # 0 تعني متاح لأي مستخدم يفتح شات مع البوت
 ALLOWED_USER_ID = int(os.environ.get("ALLOWED_USER_ID", 0))
 

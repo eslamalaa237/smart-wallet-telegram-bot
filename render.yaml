@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: smart-wallet-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: SPREADSHEET_NAME
+        value: Your_Wallet
